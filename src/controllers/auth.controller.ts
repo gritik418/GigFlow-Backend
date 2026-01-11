@@ -10,6 +10,7 @@ import LoginSchema from "../validators/loginSchema.js";
 import { generateAuthToken } from "../utils/token.js";
 import { GIGFLOW_TOKEN } from "../constants/index.js";
 import { cookieOptions } from "../constants/cookie.js";
+import VerifyEmailSchema from "../validators/verifyEmailSchema.js";
 
 export const userSignup = async (req: Request, res: Response) => {
   try {
@@ -127,6 +128,72 @@ export const userLogin = async (req: Request, res: Response) => {
     return res.status(200).cookie(GIGFLOW_TOKEN, token, cookieOptions).json({
       success: true,
       message: "Logged in successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+    const result = VerifyEmailSchema.safeParse(data);
+
+    if (result?.error) {
+      const tree = z.treeifyError(result.error);
+      return res.status(400).json({
+        success: false,
+        message: "Validation Error",
+        errors: tree?.properties || {},
+      });
+    }
+
+    const { email, otp } = result.data;
+
+    const user: UserInterface | null = await User.findOne({
+      email,
+      isVerified: false,
+      verificationCodeExpiry: { $gt: new Date() },
+    });
+
+    if (!user)
+      return res.status(401).json({
+        success: false,
+        message:
+          "No pending verification found for this email or OTP has expired.",
+      });
+
+    if (!user.verificationCode)
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired.",
+      });
+
+    const verify = await verifyHash(otp, user.verificationCode);
+    if (!verify) {
+      return res.status(401).json({
+        success: false,
+        message: "The OTP you entered is incorrect. Please try again.",
+      });
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      verificationCode: null,
+      verificationCodeExpiry: null,
+      isVerified: true,
+    });
+
+    const token: string = generateAuthToken({
+      email: user.email,
+      id: user._id?.toString(),
+    });
+
+    return res.status(200).cookie(GIGFLOW_TOKEN, token, cookieOptions).json({
+      success: true,
+      message: "Email verified.",
     });
   } catch (error) {
     return res.status(500).json({
