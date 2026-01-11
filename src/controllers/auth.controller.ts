@@ -3,9 +3,13 @@ import z from "zod";
 import User from "../models/User.js";
 import emailQueue from "../queues/email.queue.js";
 import { verificationEmailTemplate } from "../templates/emails/verification-email.js";
-import { hashValue } from "../utils/hash.js";
+import { hashValue, verifyHash } from "../utils/hash.js";
 import { generateVerificationCode } from "../utils/verification-code.js";
 import SignupSchema from "../validators/signupSchema.js";
+import LoginSchema from "../validators/loginSchema.js";
+import { generateAuthToken } from "../utils/token.js";
+import { GIGFLOW_TOKEN } from "../constants/index.js";
+import { cookieOptions } from "../constants/cookie.js";
 
 export const userSignup = async (req: Request, res: Response) => {
   try {
@@ -73,6 +77,56 @@ This code will expire in 10 minutes.`,
       success: true,
       message:
         "Your account has been created! Check your email to verify your account.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const userLogin = async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+    const result = LoginSchema.safeParse(data);
+
+    if (result?.error) {
+      const tree = z.treeifyError(result.error);
+      return res.status(400).json({
+        success: false,
+        message: "Validation Error",
+        errors: tree?.properties || {},
+      });
+    }
+
+    const { identifier, password } = result.data;
+
+    const user: UserInterface | null = await User.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    });
+
+    if (!user || !user.isVerified || !user.password)
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
+
+    const verify = await verifyHash(password, user.password);
+    if (!verify)
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
+
+    const token: string = generateAuthToken({
+      email: user.email,
+      id: user._id?.toString(),
+    });
+
+    return res.status(200).cookie(GIGFLOW_TOKEN, token, cookieOptions).json({
+      success: true,
+      message: "Logged in successfully.",
     });
   } catch (error) {
     return res.status(500).json({
