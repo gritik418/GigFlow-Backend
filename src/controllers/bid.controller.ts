@@ -68,3 +68,51 @@ export const createBid = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getBids = async (req: Request, res: Response) => {
+  try {
+    const gigId = req.params.gigId;
+
+    if (!req.user.id)
+      return res.status(401).json({
+        success: false,
+        message: "Unauthenticated",
+      });
+
+    if (!gigId)
+      return res.status(400).json({
+        success: false,
+        message: "Gig ID is required.",
+      });
+
+    const gig: Gig | null = await Gig.findById(gigId);
+    if (!gig)
+      return res.status(404).json({
+        success: false,
+        message: "Gig not found.",
+      });
+
+    if (gig.ownerId?.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const bids = await Bid.find({ gigId })
+      .populate("freelancerId", "firstName lastName username email")
+      .populate("gigId", "title description budget status")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "Bids retrieved successfully",
+      data: bids,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
