@@ -27,21 +27,32 @@ export const userSignup = async (req: Request, res: Response) => {
 
     const { firstName, lastName, email, username, password } = result.data;
 
-    const existingUsername = await User.findOne({ username });
+    const existingUsername: UserInterface | null = await User.findOne({
+      username,
+    });
 
-    if (existingUsername)
-      return res.status(400).json({
-        success: false,
-        message: "Username already exists.",
-      });
+    if (existingUsername) {
+      if (existingUsername.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: "Username already exists.",
+        });
+      }
+      await User.findByIdAndDelete(existingUsername._id);
+    }
 
     const existingEmail = await User.findOne({ email });
 
-    if (existingEmail)
-      return res.status(400).json({
-        success: false,
-        message: "Email already exists.",
-      });
+    if (existingEmail) {
+      if (existingEmail.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already exists.",
+        });
+      }
+
+      await User.findByIdAndDelete(existingEmail._id);
+    }
 
     const hashedPassword: string = await hashValue(password);
     const verificationCode: string = generateVerificationCode();
