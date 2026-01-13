@@ -13,9 +13,19 @@ interface UserInterface {
 }
 
 interface Gig {
+  _id: Types.ObjectId;
   title: string;
   description: string;
   budget: number;
   ownerId: Types.ObjectId;
   status: "open" | "assigned";
+}
+
+interface Bid {
+  _id: Types.ObjectId;
+  gigId: Types.ObjectId;
+  freelancerId: Types.ObjectId;
+  message: string;
+  price: number;
+  status: "pending" | "hired" | "rejected";
 }

@@ -1,6 +1,7 @@
 import express, { type Request, type Response } from "express";
 import authRoutes from "./routes/auth.routes.js";
 import gigRoutes from "./routes/gig.routes.js";
+import bidRoutes from "./routes/bid.routes.js";
 import connectToDB from "./database/index.js";
 import cookieParser from "cookie-parser";
 
@@ -14,6 +15,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/gigs", gigRoutes);
+app.use("/api/bids", bidRoutes);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({
