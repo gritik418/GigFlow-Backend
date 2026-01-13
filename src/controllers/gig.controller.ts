@@ -35,6 +35,44 @@ export const getGigs = async (req: Request, res: Response) => {
   }
 };
 
+export const getOwnGigs = async (req: Request, res: Response) => {
+  try {
+    const { search } = req.query;
+    if (!req.user.id)
+      return res.status(401).json({
+        success: false,
+        message: "Unauthenticated",
+      });
+
+    const filter: {
+      title?: { $regex: string; $options: string };
+      ownerId: string;
+    } = {
+      ownerId: req.user.id,
+    };
+
+    if (search?.toString().trim()) {
+      filter.title = {
+        $regex: search.toString().trim(),
+        $options: "i",
+      };
+    }
+    const gigs = await Gig.find(filter)
+      .populate("ownerId", "firstName lastName username email")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: gigs,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 export const createGig = async (req: Request, res: Response) => {
   try {
     const data = req.body;
