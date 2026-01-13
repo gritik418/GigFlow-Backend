@@ -116,3 +116,81 @@ export const getBids = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const hireFreelancer = async (req: Request, res: Response) => {
+  try {
+    const bidId = req.params.bidId;
+
+    if (!req.user.id)
+      return res.status(401).json({
+        success: false,
+        message: "Unauthenticated",
+      });
+
+    if (!bidId)
+      return res.status(400).json({
+        success: false,
+        message: "Bid ID is required.",
+      });
+
+    const bid: Bid | null = await Bid.findById(bidId).populate(
+      "gigId",
+      "ownerId status"
+    );
+
+    if (!bid)
+      return res.status(404).json({
+        success: false,
+        message: "Bid not found.",
+      });
+
+    if (bid.status === "hired")
+      return res.status(400).json({
+        success: false,
+        message: "Bid already hired.",
+      });
+
+    if (bid.gigId.ownerId?.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (bid.gigId.status !== "open") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot hire for closed gig.",
+      });
+    }
+
+    await Promise.all([
+      Bid.findByIdAndUpdate(bidId, {
+        status: "hired",
+      }),
+      Gig.findByIdAndUpdate(bid.gigId._id, {
+        status: "assigned",
+      }),
+      Bid.updateMany(
+        {
+          gigId: bid.gigId._id,
+          _id: { $ne: bidId },
+        },
+        {
+          status: "rejected",
+        }
+      ),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Bids hired successfully",
+      bid,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
