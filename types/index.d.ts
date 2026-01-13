@@ -11,3 +11,11 @@ interface UserInterface {
   passwordResetToken?: string;
   passwordResetTokenExpiry?: Date;
 }
+
+interface Gig {
+  title: string;
+  description: string;
+  budget: number;
+  ownerId: Types.ObjectId;
+  status: "open" | "assigned";
+}
