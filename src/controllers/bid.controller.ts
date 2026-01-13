@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import BidSchema from "../validators/bidSchema.js";
+import mongoose from "mongoose";
 import z from "zod";
-import Gig from "../models/Gig.js";
 import Bid from "../models/Bid.js";
+import Gig from "../models/Gig.js";
+import BidSchema from "../validators/bidSchema.js";
 
 export const createBid = async (req: Request, res: Response) => {
   try {
@@ -118,9 +119,10 @@ export const getBids = async (req: Request, res: Response) => {
 };
 
 export const hireFreelancer = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+
   try {
     const bidId = req.params.bidId;
-
     if (!req.user.id)
       return res.status(401).json({
         success: false,
@@ -133,24 +135,34 @@ export const hireFreelancer = async (req: Request, res: Response) => {
         message: "Bid ID is required.",
       });
 
-    const bid: Bid | null = await Bid.findById(bidId).populate(
-      "gigId",
-      "ownerId status"
-    );
+    session.startTransaction();
 
-    if (!bid)
+    const bid: Bid | null = await Bid.findById(bidId)
+      .populate("gigId", "ownerId status")
+      .session(session);
+
+    if (!bid) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Bid not found.",
       });
+    }
 
-    if (bid.status === "hired")
+    if (bid.status === "hired") {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Bid already hired.",
       });
+    }
 
     if (bid.gigId.ownerId?.toString() !== req.user.id) {
+      await session.abortTransaction();
+      session.endSession();
+
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -158,39 +170,49 @@ export const hireFreelancer = async (req: Request, res: Response) => {
     }
 
     if (bid.gigId.status !== "open") {
+      await session.abortTransaction();
+      session.endSession();
+
       return res.status(400).json({
         success: false,
         message: "Cannot hire for closed gig.",
       });
     }
 
-    await Promise.all([
-      Bid.findByIdAndUpdate(bidId, {
-        status: "hired",
-      }),
-      Gig.findByIdAndUpdate(bid.gigId._id, {
-        status: "assigned",
-      }),
-      Bid.updateMany(
-        {
-          gigId: bid.gigId._id,
-          _id: { $ne: bidId },
-        },
-        {
-          status: "rejected",
-        }
-      ),
-    ]);
+    const gigUpdate = await Gig.findOneAndUpdate(
+      { _id: bid.gigId._id, status: "open" },
+      { status: "assigned" },
+      { session, new: true }
+    );
+
+    if (!gigUpdate) throw new Error("Gig already assigned");
+
+    await Bid.findByIdAndUpdate(bidId, { status: "hired" }, { session });
+
+    await Bid.updateMany(
+      {
+        gigId: bid.gigId._id,
+        _id: { $ne: bidId },
+      },
+      { status: "rejected" },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
       success: true,
-      message: "Bids hired successfully",
+      message: "Freelancer hired successfully",
       bid,
     });
   } catch (error) {
-    return res.status(500).json({
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(409).json({
       success: false,
-      message: "Internal Server Error",
+      message: "Conflict occurred.",
     });
   }
 };
