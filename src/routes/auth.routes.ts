@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  logout,
   // resendOtp,
   userLogin,
   userSignup,
@@ -13,6 +14,8 @@ router.post("/register", userSignup);
 router.post("/login", userLogin);
 
 router.post("/verify-email", verifyEmail);
+
+router.post("/logout", logout);
 
 // router.post("/resend-otp", resendOtp);
 

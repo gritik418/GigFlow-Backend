@@ -1,14 +1,12 @@
 import type { Request, Response } from "express";
 import z from "zod";
-import User from "../models/User.js";
-import { verificationEmailTemplate } from "../templates/emails/verification-email.js";
-import { hashValue, verifyHash } from "../utils/hash.js";
-import { generateVerificationCode } from "../utils/verification-code.js";
-import SignupSchema from "../validators/signupSchema.js";
-import LoginSchema from "../validators/loginSchema.js";
-import { generateAuthToken } from "../utils/token.js";
-import { GIGFLOW_TOKEN } from "../constants/index.js";
 import { cookieOptions } from "../constants/cookie.js";
+import { GIGFLOW_TOKEN } from "../constants/index.js";
+import User from "../models/User.js";
+import { hashValue, verifyHash } from "../utils/hash.js";
+import { generateAuthToken } from "../utils/token.js";
+import LoginSchema from "../validators/loginSchema.js";
+import SignupSchema from "../validators/signupSchema.js";
 import VerifyEmailSchema from "../validators/verifyEmailSchema.js";
 
 export const userSignup = async (req: Request, res: Response) => {
@@ -91,6 +89,21 @@ export const userSignup = async (req: Request, res: Response) => {
     return res.status(201).cookie(GIGFLOW_TOKEN, token, cookieOptions).json({
       success: true,
       message: "Your account has been created!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    res.clearCookie(GIGFLOW_TOKEN, cookieOptions);
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully!",
     });
   } catch (error) {
     return res.status(500).json({
