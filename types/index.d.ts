@@ -29,3 +29,7 @@ interface Bid {
   price: number;
   status: "pending" | "hired" | "rejected";
 }
+interface JwtPayload {
+  id: string;
+  email: string;
+}

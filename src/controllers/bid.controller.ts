@@ -4,6 +4,7 @@ import z from "zod";
 import Bid from "../models/Bid.js";
 import Gig from "../models/Gig.js";
 import BidSchema from "../validators/bidSchema.js";
+import { getIO } from "../socket/socketServer.js";
 
 export const createBid = async (req: Request, res: Response) => {
   try {
@@ -138,7 +139,7 @@ export const hireFreelancer = async (req: Request, res: Response) => {
     session.startTransaction();
 
     const bid: Bid | null = await Bid.findById(bidId)
-      .populate("gigId", "ownerId status")
+      .populate("gigId", "ownerId status title")
       .session(session);
 
     if (!bid) {
@@ -200,6 +201,13 @@ export const hireFreelancer = async (req: Request, res: Response) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    const io = getIO();
+
+    io.to(bid.freelancerId.toString()).emit("bid-hired", {
+      gigTitle: bid.gigId.title,
+      message: "🎉 You have been hired for a gig!",
+    });
 
     return res.status(200).json({
       success: true,

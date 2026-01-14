@@ -6,9 +6,14 @@ import userRoutes from "./routes/user.routes.js";
 import connectToDB from "./database/index.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import http from "http";
+import socketServer from "./socket/socketServer.js";
 
 const app = express();
+const server = http.createServer(app);
 const port = process.env.PORT || 8000;
+
+socketServer(server);
 
 connectToDB();
 
@@ -17,7 +22,8 @@ app.use(
     origin: process.env.CLIENT_BASE_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    preflightContinue: false,
+    allowedHeaders: ["Authorization", "Content-Type", "Set-Cookie"],
   })
 );
 app.use(express.json());
@@ -36,6 +42,6 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`App served.`);
 });
