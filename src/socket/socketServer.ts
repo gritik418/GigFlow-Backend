@@ -60,8 +60,12 @@ const socketServer = (httpServer: http.Server) => {
 
     socket.join(socket.user!.id);
 
+    socket.on("reconnect", () => {
+      ConnectedUsers.set(socket.user.id, socket);
+    });
+
     socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.user?.id);
+      ConnectedUsers.delete(socket.user.id);
     });
   });
 
