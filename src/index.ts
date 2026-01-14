@@ -14,7 +14,7 @@ connectToDB();
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your frontend origin
+    origin: process.env.CLIENT_BASE_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -37,5 +37,5 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 app.listen(port, () => {
-  console.log(`App served at: http://localhost:${port}`);
+  console.log(`App served.`);
 });

@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
 import { sendEmail } from "../services/email.service.js";
+import { connection } from "../queues/email.queue.js";
 
 const worker = new Worker(
   "email-queue",
@@ -18,10 +19,7 @@ const worker = new Worker(
     });
   },
   {
-    connection: {
-      host: process.env.REDIS_HOST,
-      port: Number(process.env.REDIS_PORT),
-    },
+    connection,
   }
 );
 
