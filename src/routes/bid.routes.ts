@@ -12,6 +12,6 @@ router.post("/", authenticate, createBid);
 
 router.get("/:gigId", authenticate, getBids);
 
-router.get("/:bidId/hire", authenticate, hireFreelancer);
+router.patch("/:bidId/hire", authenticate, hireFreelancer);
 
 export default router;
