@@ -18,16 +18,16 @@ cd GigFlow-Backend
 npm install
 ```
 
-## 3️⃣ Start development server (hot reload)
-
-```bash
-npm run dev
-```
-
-## 4️⃣ Build for production
+## 3️⃣ Run build command
 
 ```bash
 npm run build
+```
+
+## 4️⃣ Start development server
+
+```bash
+npm run dev
 ```
 
 ## 5️⃣ Start production server
