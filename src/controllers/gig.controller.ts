@@ -35,6 +35,39 @@ export const getGigs = async (req: Request, res: Response) => {
   }
 };
 
+export const getGig = async (req: Request, res: Response) => {
+  try {
+    const gigId = req.params.gigId;
+
+    if (!gigId)
+      return res.status(400).json({
+        success: false,
+        message: "Gig ID is required.",
+      });
+
+    const gig = await Gig.findById(gigId).populate(
+      "ownerId",
+      "firstName lastName username email"
+    );
+
+    if (!gig) {
+      return res.status(404).json({
+        success: false,
+        message: "Gig not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: gig,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 export const getOwnGigs = async (req: Request, res: Response) => {
   try {
     const { search } = req.query;
